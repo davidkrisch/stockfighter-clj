@@ -21,7 +21,7 @@ The do `lein repl` and then
 
 ```clojure
 (require '(stockfighter [client :as c]))
-(api-heartbeat)
+(c/api-heartbeat)
 ```
 
 will check if the Stockfighter API is up.
@@ -34,8 +34,8 @@ There aren't any yet.
 
 ```clojure
 (require '(stockfighter [client :as c]))
-(api-heartbeat)
-(venue-heartbeat "TESTEX")
+(c/api-heartbeat)
+(c/venue-heartbeat "TESTEX")
 ```
 
 ### Tests
