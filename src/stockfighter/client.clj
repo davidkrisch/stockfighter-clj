@@ -1,6 +1,7 @@
 (ns stockfighter.client
     (:require [clj-http.client :as client]
-              [environ.core :refer [env]]))
+              [environ.core :refer [env]]
+              [cheshire.core :refer [parse-string]]))
 
 ;; (require '(stockfighter [client :as c]))
 ;; or
@@ -11,21 +12,41 @@
 (def endpoints {
   :api-heartbeat "/ob/api/heartbeat"
   :venue-heartbeat (fn [venue] (str "/ob/api/venues/" venue "/heartbeat"))
+  :stocks (fn [venue] (str "/ob/api/venues/" venue "/stocks"))
 })
 
 (def api-key
   "Get the API key from environment variable STARFIGHTER_API_KEY"
   (env :starfighter-api-key))
 
+(def headers {:headers {"X-Starfighter-Authorization" api-key}})
+
 (defn get-url [endpoint]
   (str protocol "://" host endpoint))
 
-(defn send-request [url]
-  (client/get url
-    {:headers {"X-Starfighter-Authorization" api-key}}))
+(defn send-request
+  ([endpoint]
+    (client/get (get-url (endpoint endpoints))
+      headers
+      {:as :clojure}))
+  ([endpoint venue]
+    (client/get (get-url ((endpoint endpoints) venue))
+      headers
+      {:as :clojure})))
+
+(defn body [response]
+  (parse-string (:body response)))
 
 (defn api-heartbeat []
-  (send-request (get-url (:api-heartbeat endpoints))))
+  (send-request :api-heartbeat))
 
 (defn venue-heartbeat [venue]
-  (send-request (get-url ((:venue-heartbeat endpoints) venue))))
+  (send-request :venue-heartbeat venue))
+
+(defn stocks [venue]
+  (send-request :stocks venue))
+
+(defn stocks-vec
+  "Pull the `symbols` vector out of the body of the `stocks` response"
+  [stocks-resp]
+  ((body stocks-resp) "symbols"))

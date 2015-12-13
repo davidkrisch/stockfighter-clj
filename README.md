@@ -17,14 +17,45 @@ Set an environment variable with your Starfighter
 
 The environment variable should be called `STARFIGHTER_API_KEY`
 
-The do `lein repl` and then
+Then do
 
-```clojure
-(require '(stockfighter [client :as c]))
-(c/api-heartbeat)
+```bash
+$ lein repl
 ```
 
-will check if the Stockfighter API is up.
+and then
+
+```clojure
+=> (require '(stockfighter [client :as c]))
+```
+
+Each of the following functions return a map with keys like
+`:status` and `:headers` and `:body`.  `body` can be parsed
+with
+
+```clojure
+=> (c/body (api-heartbeat))
+{"ok" true "error" ""}
+```
+
+### Stockfighter API Heartbeat
+
+```clojure
+=> (c/api-heartbeat)
+```
+
+### Exchange (venue) Heartbeat
+
+```clojure
+=> (c/venue-heartbeat "TESTEX")
+```
+
+### List of an Exchange's Stocks
+
+```clojure
+=> (c/stocks-vec (c/stocks "TESTEX"))
+[{"name" "Foreign Owned Occluded Bridge Architecture Resources", "symbol" "FOOBAR"}]
+```
 
 ## Options
 
@@ -33,9 +64,12 @@ There aren't any yet.
 ## Examples
 
 ```clojure
-(require '(stockfighter [client :as c]))
-(c/api-heartbeat)
-(c/venue-heartbeat "TESTEX")
+=> (require '(stockfighter [client :as c]))
+nil
+=> (c/api-heartbeat)
+{:status 200, :headers {"Server" "nginx/1.8.0", "Date" "Sun, 13 Dec 2015 08:32:11 GMT", "Content-Type" "application/json", "Content-Length" "22", "Connection" "close", "Strict-Transport-Security" "max-age=31536000; includeSubdomains"}, :body "{\"ok\":true,\"error\":\"\"}", :request-time 1885, :trace-redirects ["https://api.stockfighter.io/ob/api/heartbeat"], :orig-content-encoding nil}
+=> (c/venue-heartbeat "TESTEX")
+{:status 200, :headers {"Server" "nginx/1.8.0", "Date" "Sun, 13 Dec 2015 08:34:45 GMT", "Content-Type" "application/json", "Content-Length" "37", "Connection" "close", "Strict-Transport-Security" "max-age=31536000; includeSubdomains"}, :body "{\n  \"ok\": true,\n  \"venue\": \"TESTEX\"\n}", :request-time 1307, :trace-redirects ["https://api.stockfighter.io/ob/api/venues/TESTEX/heartbeat"], :orig-content-encoding nil}
 ```
 
 ### Tests
@@ -46,7 +80,6 @@ clojure and clojure testing/testing-frameworks.
 ### Bugs
 
 Plenty I'm sure.
-
 
 ## License
 

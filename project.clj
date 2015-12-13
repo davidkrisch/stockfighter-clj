@@ -8,6 +8,8 @@
                  [clj-http "2.0.0"]
                  ;; clj-http optional dependency for :as :clojure
                  [org.clojure/tools.reader "1.0.0-alpha1"]
+                 ;; clj-http optional dependency for :as :json
+                 [cheshire "5.5.0"]
                  [environ "1.0.1"]
                  ]
   :main ^:skip-aot stockfighter.core
