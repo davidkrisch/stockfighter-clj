@@ -12,10 +12,8 @@ To date, the only working API calls are the api and venue
 
 ## Usage
 
-Set an environment variable with your Starfighter
+Set an environment variable `STARFIGHTER_API_KEY` with your Starfighter
 [API key](https://www.stockfighter.io/ui/api_keys).
-
-The environment variable should be called `STARFIGHTER_API_KEY`
 
 Then do
 

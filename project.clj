@@ -11,6 +11,7 @@
                  ;; clj-http optional dependency for :as :json
                  [cheshire "5.5.0"]
                  [environ "1.0.1"]
+                 [slingshot "0.12.2"]
                  ]
   :main ^:skip-aot stockfighter.core
   :target-path "target/%s"
