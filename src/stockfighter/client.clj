@@ -21,7 +21,7 @@
   :order (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock "/orders"))
   :order-status (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
   :ticker-tape (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/tickertape/stocks/" stock))
-  :cancel-order (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order))
+  :cancel-order (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
 })
 
 (def api-key
@@ -106,7 +106,10 @@
 (defn cancel-order [venue stock order-id]
   (let [path ((:cancel-order endpoints) venue stock order-id)
         url (get-url path)
-        resp (client/delete url)]
+        resp (client/delete url {:headers headers
+                                 :throw-entire-message? true
+                                 :debug true
+                                 :debug-body true})]
     (body resp)))
 
 
@@ -126,6 +129,7 @@
         (let [filled (response-body "totalFilled")]
           (prn "********---> filled: " filled)
           (swap! totalFilled + filled))))))
+
 
 ;; ----------------------
 ;; Level 3 - Market Maker
