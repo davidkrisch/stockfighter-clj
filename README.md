@@ -55,6 +55,38 @@ with
 [{"name" "Foreign Owned Occluded Bridge Architecture Resources", "symbol" "FOOBAR"}]
 ```
 
+### Get the orderbook for a stock
+
+```clojure
+=> (c/orderbook "TESTEX" "FOOBAR")
+```
+
+### Quote for a stock
+
+```clojure
+=> (c/stock-quote "TESTEX" "FOOBAR")
+```
+
+### Place an order for a stock
+
+```clojure
+=> (def request-body (order-body "MYACCOUNT" "TESTEX" "FOOBAR" 10 9999 "buy" "limit"))
+=> (c/order "TESTEX" "FOOBAR" request-body)
+
+### Check status on an order
+
+```clojure
+=> (def order-id 1234)
+=> (c/order-status "TESTEX" "FOOBAR" order-id)
+```
+
+### Cancel an order
+
+```clojure
+=> (def order-id 1234)
+=> (c/cancel-order "TESTEX" "FOOBAR" order-id)
+```
+
 ## Options
 
 There aren't any yet.
