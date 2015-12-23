@@ -1,13 +1,7 @@
 (ns stockfighter.client
     (:require [clj-http.client :as client]
               [environ.core :refer [env]]
-              [cheshire.core :refer [parse-string generate-string]]
-              [aleph.http :as http]
-              [manifold.stream :as s]))
-
-;; (require '(stockfighter [client :as c]))
-;; or
-;; (use 'stockfighter.client :reload)
+              [cheshire.core :refer [parse-string generate-string]]))
 
 (def protocol "https")
 (def ws-protocol "wss")
@@ -36,6 +30,9 @@
 (defn get-ws-url [path]
   (str ws-protocol "://" host path))
 
+(defn ticker-tape-url [venue stock account]
+  (get-ws-url ((endpoints :ticker-tape) venue stock account)))
+
 (defn send-request
   ([endpoint]
     (client/get (get-url (endpoint endpoints))
@@ -52,13 +49,11 @@
        :debug true
        :debug-body true}))
   ([endpoint venue stock]
-     (client/get (get-url ((endpoint endpoints) venue stock))))
+   (let [url (get-url ((endpoint endpoints) venue stock))]
+     (client/get url {:headers headers})))
   ([endpoint venue stock order-id]
      (client/get (get-url ((endpoint endpoints) venue stock order-id))
-                 {:headers headers
-                  :throw-entire-message? true
-                  :debug true
-                  :debug-body true})))
+                 {:headers headers})))
 
 (defn send-post [endpoint venue stock body]
   (client/post (get-url ((endpoint endpoints) venue stock))
@@ -67,8 +62,7 @@
                 :body-encoding "UTF-8"
                 :throw-entire-message? true
                 :debug true
-                :debug-body true
-                }))
+                :debug-body true}))
 
 (defn body [response]
   (parse-string (:body response)))
@@ -113,54 +107,6 @@
     (body resp)))
 
 
-;; ----------------------------
-;; Level 2 - Buy 100,000 shares
-;; ----------------------------
-
-(def totalFilled (atom 0))
-
-(defn level2 [account venue stock price]
-  (while (< @totalFilled 100000)
-    (let [request-body (order-body account venue stock (rand-int 1000) price "buy" "immediate-or-cancel")
-          response-body (body (order venue stock request-body))]
-      (prn " ------> " request-body)
-      (prn " ---------> " response-body)
-      (if (contains? response-body "totalFilled")
-        (let [filled (response-body "totalFilled")]
-          (prn "********---> filled: " filled)
-          (swap! totalFilled + filled))))))
 
 
-;; ----------------------
-;; Level 3 - Market Maker
-;; ----------------------
-
-(defn ticker-tape-url [venue stock account]
-  (get-ws-url ((endpoints :ticker-tape) venue stock account)))
-
-(defn ticker-tape [venue stock account]
-  (let [url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)]
-    (prn @(s/take! conn))))
-
-; Market Maker Processes
-;
-; 1. Websocket listener - ticker-tape messages
-;     - parse response
-;     - put on chan
-; 2. Get bid/ask from channel
-;     - Compare bid to current buy order
-;        - If bid is higher, put message on channel
-;     - Compare ask to current sell order
-;        - If ask is lower, put message on channel
-; 3. Cancel order
-; 4. Place 1 buy, 1 sell order
-; 5. Websocket listener - fills
-;     - If our order is complete, place another
-;
-; State
-; - Current bid
-; - Current ask
-; - 1 outstanding buy order (order-id price num-shares)
-; - 1 outstanding sell order ^^
 
