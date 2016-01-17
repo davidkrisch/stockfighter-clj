@@ -1,6 +1,9 @@
 (ns stockfighter.client
     (:require [clj-http.client :as client]
               [environ.core :refer [env]]
+              [clojure.core.async :as async]
+              [aleph.http :as http]
+              [manifold.stream :as s]
               [cheshire.core :refer [parse-string generate-string]]))
 
 (def protocol "https")
@@ -106,7 +109,26 @@
                                  :debug-body true})]
     (body resp)))
 
+(defn ticker
+  "
+  Connect to stock-ticker websocket and jam results
+  onto (:chan-out system) until the connection closes
+  or chan-out closes
+  "
+  [system]
+  (let [{:keys [venue stock account]} system
+        url (ticker-tape-url venue stock account)
+        conn @(http/websocket-client url)
+        chan-out (:chan-out system)]
+    (async/thread
+      (loop []
+        (when-let [m @(s/take! conn)]
+          (when-let [_ (async/>!! chan-out m)]
+            ;;(prn (parse-string m))
+            ;; TODO do some logging of the messages
+            (recur)))))))
 
-
-
-
+;; Blocking get of last message
+;(async/<!! (:chan-out system))
+;; Close the channel,
+;(async/close! (:chan-out system))

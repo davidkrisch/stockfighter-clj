@@ -16,3 +16,4 @@ pom.xml.asc
 .hg/
 *.un~
 *.swp
+*.swo

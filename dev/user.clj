@@ -8,6 +8,7 @@
             [clojure.core.async :as async]
             [aleph.http :as http]
             [manifold.stream :as s]
+            [cheshire.core :refer [parse-string generate-string]]
             [stockfighter.client :as client :refer :all]))
 
 ;; (require '(stockfighter [client :as c]))
@@ -124,4 +125,76 @@
 ; - Current ask
 ; - 1 outstanding buy order (order-id price num-shares)
 ; - 1 outstanding sell order ^^
+;
+; THIS SEEMS TO WORK
+; stockfighter.core=> (def account "MAH91523492")
+; #'stockfighter.core/account
+; stockfighter.core=> (def stock "UPWY")
+; #'stockfighter.core/stock
+; stockfighter.core=> (def venue "IOKVEX")
+; #'stockfighter.core/venue
+; stockfighter.core=> (def url (ticker-tape-url venue stock account))
+; #'stockfighter.core/url
+; stockfighter.core=> url
+; "wss://api.stockfighter.io/ob/api/ws/MAH91523492/venues/IOKVEX/tickertape/stocks/UPWY"
+; stockfighter.core=> (def conn @(http/websocket-client url))
+; #'stockfighter.core/conn
+; stockfighter.core=> (prn @(s/take! conn))
+; "{\"ok\":true,\"quote\":{\"symbol\":\"UPWY\",\"venue\":\"IOKVEX\",\"bid\":6034,\"ask\":6094,\"bidSize\":6018,\"askSize\":3782,\"bidDepth\":18054,\"askDepth\":11596,\"last\":6094,\"lastSize\":125,\"lastTrade\":\"2015-12-21T09:30:21.269035544Z\",\"quoteTime\":\"2015-12-21T09:30:21.26909563Z\"}}"
+; nil
+; END WORKING STUFF
 
+(defn num-src [out]
+  (async/go-loop [i 0]
+           (async/>! out i)
+           (recur (inc i))))
+
+
+(def url (ticker-tape-url (:venue system) (:stock system) (:account system)))
+
+(defn ticker-proto
+  "Working - prints url and results of ws 3 times"
+  [system]
+  (let [{:keys [venue stock account]} system
+        url (ticker-tape-url venue stock account)
+        conn @(http/websocket-client url)]
+    (prn url)
+    (dotimes [n 3]
+      (prn (parse-string @(s/take! conn))))))
+
+
+(def system {
+             :account "SAK80780336"
+             :venue "BABTEX"
+             :stock "AOY"
+             :chan-out (async/chan (async/sliding-buffer 1))
+             })
+
+(defn ticker
+  "
+  Connect to stock-ticker websocket and jam results
+  onto (:chan-out system) until the connection closes
+  or chan-out closes
+  "
+  [system]
+  (let [{:keys [venue stock account]} system
+        url (ticker-tape-url venue stock account)
+        conn @(http/websocket-client url)
+        chan-out (:chan-out system)]
+    (async/thread
+      (loop []
+        (when-let [m @(s/take! conn)]
+          (when-let [_ (async/>!! chan-out m)]
+            ;;(prn (parse-string m))
+            ;; TODO do some logging of the messages
+            (recur)))))))
+
+;(async/<!! (:chan-out system)) ;; blocking get of last message
+;(async/close! (:chan-out system)) ;; close the channel
+
+
+;; (use 'stockfighter.client :reload)
+;; (use 'user :reload)
+; (num-src a)
+; (println (async/<!! a))
+; (async/close a)
