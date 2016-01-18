@@ -72,11 +72,11 @@ Each of the following functions return a map with keys like
 See the [official documentation](https://starfighter.readme.io/docs/place-new-order).
 
 ```clojure
-=> (def request-body (order-body "MYACCOUNT" ;; Account number
+=> (def request-body (order-body "EXB123456" ;; Account number
                                  "TESTEX"    ;; Venue
                                  "FOOBAR"    ;; Stock symbol
                                  10          ;; quantity
-                                 9999        ;; price
+                                 9999        ;; price $99.99
                                  "buy"       ;; direction - "buy" or "sell"
                                  "limit"))   ;; order type
 => (order "TESTEX" "FOOBAR" request-body)
@@ -94,6 +94,38 @@ See the [official documentation](https://starfighter.readme.io/docs/place-new-or
 ```clojure
 => (def order-id 1234)
 => (cancel-order "TESTEX" "FOOBAR" order-id)
+```
+
+### Ticker Tape
+
+The methods above are request/response oriented.  `ticker`
+connects to a websocket and returns a stream of stock
+quotes.   This is done in a separate thread so it doesn't
+tie up the repl while it is connected
+
+```clojure
+=> (def system {:chan-out (chan (sliding/buffer 1))
+                :account "EXB123456"
+                :venue "TESTEX"
+                :stock "FOOBAR"
+                :qty 10
+                :order-type "limit"
+                })
+=> (ticker system)
+```
+
+Message received on the ticker tape websocket will be placed
+on the `:chan-out` channel and can be retrieved with a blocking
+call like:
+
+```clojure
+=> (<!! (:chan-out system))
+```
+
+Closing the websocket is accomplished by closing `:chan-out`
+
+```clojure
+=> (close! (:chan-out system))
 ```
 
 ## Options

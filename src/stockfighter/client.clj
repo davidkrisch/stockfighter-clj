@@ -36,21 +36,18 @@
 (defn ticker-tape-url [venue stock account]
   (get-ws-url ((endpoints :ticker-tape) venue stock account)))
 
+;{:as :clojure
+       ;:throw-entire-message? true
+       ;:debug true
+       ;:debug-body true}
+
 (defn send-request
   ([endpoint]
     (client/get (get-url (endpoint endpoints))
-      {:headers headers}
-      {:as :clojure
-       :throw-entire-message? true
-       :debug true
-       :debug-body true}))
+      {:headers headers}))
   ([endpoint venue]
     (client/get (get-url ((endpoint endpoints) venue))
-      {:headers headers}
-      {:as :clojure
-       :throw-entire-message? true
-       :debug true
-       :debug-body true}))
+      {:headers headers}))
   ([endpoint venue stock]
    (let [url (get-url ((endpoint endpoints) venue stock))]
      (client/get url {:headers headers})))
@@ -62,13 +59,10 @@
   (client/post (get-url ((endpoint endpoints) venue stock))
                {:headers headers
                 :body (generate-string body)
-                :body-encoding "UTF-8"
-                :throw-entire-message? true
-                :debug true
-                :debug-body true}))
+                :body-encoding "UTF-8"}))
 
 (defn body [response]
-  (parse-string (:body response)))
+  (clojure.walk/keywordize-keys (parse-string (:body response))))
 
 (defn api-heartbeat []
   (send-request :api-heartbeat))
@@ -122,8 +116,8 @@
         chan-out (:chan-out system)]
     (async/thread
       (loop []
-        (when-let [m @(s/take! conn)]
-          (when-let [_ (async/>!! chan-out m)]
+        (when-let [m (parse-string @(s/take! conn))]
+          (when-let [_ (async/>!! chan-out (clojure.walk/keywordize-keys m))]
             ;;(prn (parse-string m))
             ;; TODO do some logging of the messages
             (recur)))))))

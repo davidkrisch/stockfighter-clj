@@ -21,6 +21,7 @@
 
 (def totalFilled (atom 0))
 
+; This one worked
 (defn level2 [account venue stock price]
   (while (< @totalFilled 100000)
     (let [request-body (order-body account venue stock (rand-int 1000) price "buy" "immediate-or-cancel")
@@ -32,6 +33,7 @@
           (prn "********---> filled: " filled)
           (swap! totalFilled + filled))))))
 
+
 ;; ----------------------
 ;; Level 3 - Market Maker
 ;; ----------------------
@@ -40,93 +42,8 @@
 ;; --------------------------
 ;; Level 4 Dueling Bulldozers
 ;; --------------------------
-;(def uyum-buy (order-body account venue stock 10 2500 "buy" "limit"))
-;(order venue stock uyum-buy)
-;(def uyum-sell (order-body account venue stock 10 30000 "sell" "limit"))
-;(order venue stock uyum-sell)
 
-; None of the code below works
-
-(defn get-ask [venue stock]
-  (-> (stock-quote venue stock) body (get "ask")))
-
-(defn get-bid [venue stock]
-  (-> (stock-quote venue stock) body (get "bid")))
-
-(def total (atom 0))
-(def sold-price (atom 0))
-(def bought-price (atom 0))
-
-(defn level4 [account venue stock]
-  (while (< @total 250000)
-    (let [bid (get-bid venue stock)
-          ask (get-ask venue stock)
-          sell? (> @bought-price ask)
-          buy? (< @sold-price bid)
-          sell-body (order-body account venue stock 10 (- ask 5) "sell" "limit")
-          buy-body (order-body account venue stock 10 (+ bid 5) "buy" "limit")]
-      (if buy?
-        (-> (order account venue stock buy-body) body))
-      (if sell?
-        (order account venue stock sell-body)))))
-
-
-
-(def ticker-chan (async/chan))
-(def bid (atom 0))
-(def ask (atom 0))
-
-
-(defn ticker-tape-B [venue stock account]
-  (let [url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)]
-    (prn @(s/take! conn))))
-
-
-(defn ticker-tape-A [venue stock account]
-  (let [url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)]
-    (async/go
-     (do
-       (async/>! ticker-chan @(s/take! conn))
-       (let [t (async/<! ticker-chan)]
-         (prn t))))))
-
-
-(defn ticker-tape [venue stock account]
-  (let [url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)]
-    (while true
-      (async/go
-        (do
-          (async/>! ticker-chan @(s/take! conn))
-          (let [t (async/<! ticker-chan)
-                t-body (body t)
-                {:strs [bid ask]} t-body]
-            (prn "bid: " bid "; ask: " ask)))))))
-
-; Market Maker Processes
-;
-; 1. Websocket listener - ticker-tape messages
-;     - parse response
-;     - put on chan
-; 2. Get bid/ask from channel
-;     - Compare bid to current buy order
-;        - If bid is higher, put message on channel
-;     - Compare ask to current sell order
-;        - If ask is lower, put message on channel
-; 3. Cancel order
-; 4. Place 1 buy, 1 sell order
-; 5. Websocket listener - fills
-;     - If our order is complete, place another
-;
-; State
-; - Current bid
-; - Current ask
-; - 1 outstanding buy order (order-id price num-shares)
-; - 1 outstanding sell order ^^
-;
-; THIS SEEMS TO WORK
+; THIS WORKS
 ; stockfighter.core=> (def account "MAH91523492")
 ; #'stockfighter.core/account
 ; stockfighter.core=> (def stock "UPWY")
@@ -144,57 +61,50 @@
 ; nil
 ; END WORKING STUFF
 
-(defn num-src [out]
-  (async/go-loop [i 0]
-           (async/>! out i)
-           (recur (inc i))))
-
-
-(def url (ticker-tape-url (:venue system) (:stock system) (:account system)))
-
-(defn ticker-proto
-  "Working - prints url and results of ws 3 times"
-  [system]
-  (let [{:keys [venue stock account]} system
-        url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)]
-    (prn url)
-    (dotimes [n 3]
-      (prn (parse-string @(s/take! conn))))))
-
-
-(def system {
-             :account "SAK80780336"
-             :venue "BABTEX"
-             :stock "AOY"
-             :chan-out (async/chan (async/sliding-buffer 1))
-             })
-
-(defn ticker
-  "
-  Connect to stock-ticker websocket and jam results
-  onto (:chan-out system) until the connection closes
-  or chan-out closes
-  "
-  [system]
-  (let [{:keys [venue stock account]} system
-        url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)
-        chan-out (:chan-out system)]
-    (async/thread
-      (loop []
-        (when-let [m @(s/take! conn)]
-          (when-let [_ (async/>!! chan-out m)]
-            ;;(prn (parse-string m))
-            ;; TODO do some logging of the messages
-            (recur)))))))
-
-;(async/<!! (:chan-out system)) ;; blocking get of last message
-;(async/close! (:chan-out system)) ;; close the channel
-
 
 ;; (use 'stockfighter.client :reload)
 ;; (use 'user :reload)
-; (num-src a)
-; (println (async/<!! a))
-; (async/close a)
+
+; Simple Strategy
+;  For each ticker quote
+;    if bid in quote and sell?
+;      sell @ ask - 5 x 100
+;    if ask in quote and buy?
+;      buy @ bid + 5 x 100
+
+; State
+; - Position - shares long/short & price
+; - 1 outstanding buy order (order-id price num-shares)
+; - 1 outstanding sell order ^^
+
+(def system {
+             :account "WAT42153333"
+             :venue "DUWPEX"
+             :stock "OLC"
+             :chan-out (async/chan (async/sliding-buffer 1))
+             :qty 1000
+             :order-type "limit"
+             :state (atom {:position 0})
+             })
+
+; Buy if :position < 0 (+100?)
+; Sell if :position > 0 (-100?)
+
+(defn do-orders [system price direction]
+  (let [{:keys [venue stock account qty order-type]} system
+        b (order-body account venue stock qty price direction order-type)]
+    (println (format ">>>>> Request Body: %s" b))
+    (println (format ">>>> Response Body: %s" (body (order venue stock b))))))
+
+(defn lvl4b [system]
+  (let [ticker-chan (:chan-out system)]
+    (async/thread
+      (loop []
+        (when-let [m (async/<!! ticker-chan)]
+          (when-let [ask (-> :quote m :ask)]
+            (println (format "Ask: %5d\n" ask))
+            (do-orders system (- ask 5) "sell"))
+          (when-let [bid (-> :quote m :bid)]
+            (println (format "Bid: %5d\n" bid))
+            (do-orders system (+ bid 5) "buy"))
+          (recur))))))
