@@ -111,6 +111,8 @@
 
 (defn- consume-websocket
   "Wait for messages on `ws-conn`, put them on `channel` when they arrive"
+  [ws-conn channel]
+  (consume-websocket ws-conn channel false)
   [ws-conn channel log-prefix]
   (async/thread
     (loop []
@@ -128,7 +130,7 @@
   [system]
   (let [conn (:ticker-ws-conn system)
         ticker-chan (:ticker-chan system)]
-    (consume-websocket conn ticker-chan false)))
+    (consume-websocket conn ticker-chan)))
 
 (defn executions
   "
