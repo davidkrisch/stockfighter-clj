@@ -107,22 +107,14 @@
   "
   Connect to stock-ticker websocket and jam results
   onto (:chan-out system) until the connection closes
-  or chan-out closes
+  or ticker-chan closes
   "
   [system]
-  (let [{:keys [venue stock account]} system
-        url (ticker-tape-url venue stock account)
-        conn @(http/websocket-client url)
-        chan-out (:chan-out system)]
+  (let [conn (:ticker-ws-conn system)
+        ticker-chan (:ticker-chan system)]
     (async/thread
       (loop []
         (when-let [m (parse-string @(s/take! conn))]
-          (when-let [_ (async/>!! chan-out (clojure.walk/keywordize-keys m))]
-            ;;(prn (parse-string m))
-            ;; TODO do some logging of the messages
+          (when-let [_ (async/>!! ticker-chan (clojure.walk/keywordize-keys m))]
+            ;; TODO response logging
             (recur)))))))
-
-;; Blocking get of last message
-;(async/<!! (:chan-out system))
-;; Close the channel,
-;(async/close! (:chan-out system))
