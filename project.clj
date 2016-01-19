@@ -5,10 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [
                  [org.clojure/clojure "1.7.0"]
+                 [org.clojure/tools.logging "0.3.1"]
                  [clj-http "2.0.0"]
-                 ;; clj-http optional dependency for :as :clojure
-                 [org.clojure/tools.reader "1.0.0-alpha1"]
-                 ;; clj-http optional dependency for :as :json
                  [cheshire "5.5.0"]
                  [environ "1.0.1"]
                  [aleph "0.4.1-beta2"]

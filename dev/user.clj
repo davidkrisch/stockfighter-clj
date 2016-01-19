@@ -18,6 +18,16 @@
 
 (def system nil)
 
+(defn init
+  "Initialize system, but don't start it running"
+  []
+  (let [venue "QEITEX"
+        stock "SEI"
+        account "SSB92351643"
+        test-fn do-it]
+    (alter-var-root #'system
+                      (constantly (system/make-system venue stock account test-fn)))))
+
 (defn stop
   "Shuts down and destroys the current development system."
   []
@@ -27,13 +37,8 @@
 (defn go
   "Initializes the current development system and starts it running."
   []
-  (let [venue "SLEX"
-        stock "MUED"
-        account "PHW92235155"
-        test-fn do-it]
-    (alter-var-root #'system
-                      (constantly (system/make-system venue stock account test-fn)))
-    (alter-var-root #'system system/start)))
+  (init)
+  (alter-var-root #'system system/start))
 
 
 (defn reset []

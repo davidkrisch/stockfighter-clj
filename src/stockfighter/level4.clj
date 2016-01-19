@@ -44,4 +44,3 @@
             (println (format "Bid: %5d\n" bid))
             (do-orders system (+ bid 5) "buy"))
           (recur))))))
-

@@ -1,6 +1,7 @@
 (ns stockfighter.client
     (:require [clj-http.client :as client]
               [environ.core :refer [env]]
+              [clojure.tools.logging :as log]
               [clojure.core.async :as async]
               [aleph.http :as http]
               [manifold.stream :as s]
@@ -18,6 +19,7 @@
   :order (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock "/orders"))
   :order-status (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
   :ticker-tape (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/tickertape/stocks/" stock))
+  :fills (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/executions/stocks/" stock))
   :cancel-order (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
 })
 
@@ -36,10 +38,14 @@
 (defn ticker-tape-url [venue stock account]
   (get-ws-url ((endpoints :ticker-tape) venue stock account)))
 
+(defn fills-url [venue stock account]
+  (get-ws-url ((endpoints :fills) venue stock account)))
+
+; Debug options
 ;{:as :clojure
-       ;:throw-entire-message? true
-       ;:debug true
-       ;:debug-body true}
+;       :throw-entire-message? true
+;       :debug true
+;       :debug-body true}
 
 (defn send-request
   ([endpoint]
@@ -97,24 +103,40 @@
 (defn cancel-order [venue stock order-id]
   (let [path ((:cancel-order endpoints) venue stock order-id)
         url (get-url path)
-        resp (client/delete url {:headers headers
-                                 :throw-entire-message? true
-                                 :debug true
-                                 :debug-body true})]
+        resp (client/delete url {:headers headers})]
     (body resp)))
+
+
+; Here be Websockets
+
+(defn- consume-websocket
+  "Wait for messages on `ws-conn`, put them on `channel` when they arrive"
+  [ws-conn channel log-prefix]
+  (async/thread
+    (loop []
+      (when-let [m (parse-string @(s/take! ws-conn))]
+        (when-let [_ (async/>!! channel (clojure.walk/keywordize-keys m))]
+          (when log-prefix (log/info log-prefix m))
+          (recur))))))
 
 (defn ticker
   "
   Connect to stock-ticker websocket and jam results
-  onto (:chan-out system) until the connection closes
+  onto (:ticker-chan system) until the connection closes
   or ticker-chan closes
   "
   [system]
   (let [conn (:ticker-ws-conn system)
         ticker-chan (:ticker-chan system)]
-    (async/thread
-      (loop []
-        (when-let [m (parse-string @(s/take! conn))]
-          (when-let [_ (async/>!! ticker-chan (clojure.walk/keywordize-keys m))]
-            ;; TODO response logging
-            (recur)))))))
+    (consume-websocket conn ticker-chan false)))
+
+(defn executions
+  "
+  Connect to the Executions websocket and jam results
+  onto (:fills-chan system) until the connection closes
+  or fills-chan closes.
+  "
+  [system]
+  (let [conn (:fills-ws-conn system)
+        fills-chan (:fills-chan system)]
+    (consume-websocket conn fills-chan "Fill: ")))
