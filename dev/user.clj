@@ -13,7 +13,6 @@
             [stockfighter.core :as system]
             [stockfighter.level4 :refer [do-it]]))
 
-
 ;; To run in the repl: (reset)
 
 (def system nil)
@@ -26,7 +25,7 @@
         account "SSB92351643"
         test-fn do-it]
     (alter-var-root #'system
-                      (constantly (system/make-system venue stock account test-fn)))))
+                    (constantly (system/make-system venue stock account test-fn)))))
 
 (defn stop
   "Shuts down and destroys the current development system."
@@ -39,7 +38,6 @@
   []
   (init)
   (alter-var-root #'system system/start))
-
 
 (defn reset []
   (stop)

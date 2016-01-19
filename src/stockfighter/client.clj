@@ -1,31 +1,27 @@
 (ns stockfighter.client
-    (:require [clj-http.client :as client]
-              [environ.core :refer [env]]
-              [clojure.tools.logging :as log]
-              [clojure.core.async :as async]
-              [aleph.http :as http]
-              [manifold.stream :as s]
-              [cheshire.core :refer [parse-string generate-string]]))
+  (:require [clj-http.client :as client]
+            [environ.core :refer [env]]
+            [clojure.tools.logging :as log]
+            [clojure.core.async :as async]
+            [aleph.http :as http]
+            [manifold.stream :as s]
+            [cheshire.core :refer [parse-string generate-string]]))
 
 (def protocol "https")
 (def ws-protocol "wss")
 (def host "api.stockfighter.io")
-(def endpoints {
-  :api-heartbeat "/ob/api/heartbeat"
-  :venue-heartbeat (fn [venue] (str "/ob/api/venues/" venue "/heartbeat"))
-  :stocks (fn [venue] (str "/ob/api/venues/" venue "/stocks"))
-  :orderbook (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock))
-  :stock-quote (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock "/quote"))
-  :order (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock "/orders"))
-  :order-status (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
-  :ticker-tape (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/tickertape/stocks/" stock))
-  :fills (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/executions/stocks/" stock))
-  :cancel-order (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
-})
+(def endpoints {:api-heartbeat "/ob/api/heartbeat"
+                :venue-heartbeat (fn [venue] (str "/ob/api/venues/" venue "/heartbeat"))
+                :stocks (fn [venue] (str "/ob/api/venues/" venue "/stocks"))
+                :orderbook (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock))
+                :stock-quote (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock "/quote"))
+                :order (fn [venue stock] (str "/ob/api/venues/" venue "/stocks/" stock "/orders"))
+                :order-status (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))
+                :ticker-tape (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/tickertape/stocks/" stock))
+                :fills (fn [venue stock account] (str "/ob/api/ws/" account "/venues/" venue "/executions/stocks/" stock))
+                :cancel-order (fn [venue stock order-id] (str "/ob/api/venues/" venue "/stocks/" stock "/orders/" order-id))})
 
-(def api-key
-  "Get the API key from environment variable STARFIGHTER_API_KEY"
-  (env :starfighter-api-key))
+(def api-key (env :starfighter-api-key))
 
 (def headers {"X-Starfighter-Authorization" api-key})
 
@@ -49,17 +45,17 @@
 
 (defn send-request
   ([endpoint]
-    (client/get (get-url (endpoint endpoints))
-      {:headers headers}))
+   (client/get (get-url (endpoint endpoints))
+               {:headers headers}))
   ([endpoint venue]
-    (client/get (get-url ((endpoint endpoints) venue))
-      {:headers headers}))
+   (client/get (get-url ((endpoint endpoints) venue))
+               {:headers headers}))
   ([endpoint venue stock]
    (let [url (get-url ((endpoint endpoints) venue stock))]
      (client/get url {:headers headers})))
   ([endpoint venue stock order-id]
-     (client/get (get-url ((endpoint endpoints) venue stock order-id))
-                 {:headers headers})))
+   (client/get (get-url ((endpoint endpoints) venue stock order-id))
+               {:headers headers})))
 
 (defn send-post [endpoint venue stock body]
   (client/post (get-url ((endpoint endpoints) venue stock))
@@ -105,7 +101,6 @@
         url (get-url path)
         resp (client/delete url {:headers headers})]
     (body resp)))
-
 
 ; Here be Websockets
 

@@ -4,7 +4,6 @@
             [aleph.http :as http]
             [stockfighter.client :as client]))
 
-
 (defn make-system
   "Returns a new instace of the whole application"
   [venue stock account solution-fn]
@@ -17,9 +16,8 @@
    :fills-ws-conn nil
    :solution-fn solution-fn})
 
-
 (defn- sliding-buf-chan [size]
-    (async/chan (async/sliding-buffer size)))
+  (async/chan (async/sliding-buffer size)))
 
 (defn- ws-client [url]
   @(http/websocket-client url))
@@ -37,14 +35,13 @@
         ticker-chan (sliding-buf-chan 1)
         fills-chan (sliding-buf-chan 100) ; TODO is sliding buffer okay?
         s (assoc system :ticker-chan ticker-chan
-                        :fills-chan fills-chan
-                        :ticker-ws-conn ticker-ws-conn
-                        :fills-ws-conn fills-ws-conn)]
+                 :fills-chan fills-chan
+                 :ticker-ws-conn ticker-ws-conn
+                 :fills-ws-conn fills-ws-conn)]
     (client/executions s)
     (client/ticker s)
     ((:solution-fn s) s)
     s))
-
 
 (defn- close-ws-conn! [conn]
   (if conn (stream/close! conn)))
@@ -64,6 +61,6 @@
 
   (println "Stopping for now")
   (assoc system :ticker-chan nil
-                :fills-chan nil
-                :ticker-ws-conn nil
-                :fills-ws-conn nil))
+         :fills-chan nil
+         :ticker-ws-conn nil
+         :fills-ws-conn nil))
