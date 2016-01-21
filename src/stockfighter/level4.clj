@@ -1,6 +1,7 @@
 (ns stockfighter.level4
   (:require [clojure.core.async :as async]
-            [stockfighter.client :as client]))
+            [stockfighter.client :as client]
+            [stockfighter.state :as state]))
 
 ;; --------------------------
 ;; Level 4 Dueling Bulldozers
@@ -25,22 +26,48 @@
 
 (defn- do-orders [system price direction]
   (let [{:keys [venue stock account]} system
-        qty 10
+        qty 100
         order-type "limit"
         b (client/order-body account venue stock qty price direction order-type)
-        resp (client/body (client/order venue stock b))]
-    (println (format ">>>>>>>> Request: %s" b))
-    (println (format ">>> Response: %s" resp))))
+        resp (client/body (client/order venue stock b))
+        inv-fn (if (= "buy" direction) + -)
+        order (:order system)
+        inventory (:inventory system)]
+    (println (format ">>>>>>>> %s: %s" direction b))
+    (println (format ">>> Response: %s" resp))
+    (reset! order resp) ; TODO put response in system:orders
+    ; must do this so we can cancel orders that never fill
+    (swap! inventory (partial inv-fn qty))))
+
+(defn- price [q k]
+  (let [p (-> :quote q k)]
+    (if (= k :ask)
+      (+ p 200)
+      (- p 200))))
 
 (defn do-it [system]
+  (println "^^^Starting quote responder thread!!!!")
   (let [ticker-chan (:ticker-chan system)]
     (async/thread
       (loop []
         (when-let [m (async/<!! ticker-chan)]
-          (when-let [ask (-> :quote m :ask)]
-            (println (format "Ask: %5d\n" ask))
-            (do-orders system (- ask 5) "sell"))
-          (when-let [bid (-> :quote m :bid)]
-            (println (format "Bid: %5d\n" bid))
-            (do-orders system (+ bid 5) "buy"))
+          (if-not @(:order system)
+            (do
+              (if (pos? @(:inventory system))
+                (do-orders system (price m :ask) "sell")
+                (do-orders system (price m :bid) "buy"))))
           (recur))))))
+
+; first attempt
+;(defn do-it [system]
+  ;(let [ticker-chan (:ticker-chan system)]
+    ;(async/thread
+      ;(loop []
+        ;(when-let [m (async/<!! ticker-chan)]
+          ;(when-let [ask (-> :quote m :ask)]
+            ;(println (format "Ask: %5d\n" ask))
+            ;(do-orders system (- ask 5) "sell"))
+          ;(when-let [bid (-> :quote m :bid)]
+            ;(println (format "Bid: %5d\n" bid))
+            ;(do-orders system (+ bid 5) "buy"))
+          ;(recur))))))

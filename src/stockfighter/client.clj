@@ -106,15 +106,15 @@
 
 (defn- consume-websocket
   "Wait for messages on `ws-conn`, put them on `channel` when they arrive"
-  [ws-conn channel]
-  (consume-websocket ws-conn channel false)
-  [ws-conn channel log-prefix]
-  (async/thread
-    (loop []
-      (when-let [m (parse-string @(s/take! ws-conn))]
-        (when-let [_ (async/>!! channel (clojure.walk/keywordize-keys m))]
-          (when log-prefix (log/info log-prefix m))
-          (recur))))))
+  ([ws-conn channel]
+   (consume-websocket ws-conn channel false))
+  ([ws-conn channel log-prefix]
+   (async/thread
+     (loop []
+       (when-let [m (parse-string @(s/take! ws-conn))]
+         (when-let [_ (async/>!! channel (clojure.walk/keywordize-keys m))]
+           (when log-prefix (log/info log-prefix m))
+           (recur)))))))
 
 (defn ticker
   "
@@ -123,9 +123,8 @@
   or ticker-chan closes
   "
   [system]
-  (let [conn (:ticker-ws-conn system)
-        ticker-chan (:ticker-chan system)]
-    (consume-websocket conn ticker-chan)))
+  (let [{:keys [ticker-ws-conn ticker-chan]} @system]
+    (consume-websocket ticker-ws-conn ticker-chan)))
 
 (defn executions
   "
@@ -134,6 +133,7 @@
   or fills-chan closes.
   "
   [system]
-  (let [conn (:fills-ws-conn system)
-        fills-chan (:fills-chan system)]
-    (consume-websocket conn fills-chan "Fill: ")))
+  (let [sys @system
+        conn (:fills-ws-conn sys)
+        fills-chan (:fills-chan sys)]
+    (consume-websocket conn fills-chan)))
