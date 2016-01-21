@@ -42,10 +42,12 @@
            :fills-chan fills-chan
            :ticker-ws-conn ticker-ws-conn
            :fills-ws-conn fills-ws-conn)
+    (stream/on-closed fills-ws-conn (println ">> fills websocket closed"))
+    (stream/on-closed ticker-ws-conn (println ">> ticker websocket closed"))
     (client/executions system)
     (state/fill-resp system)
     (client/ticker system)
-    ; ((:solution-fn s) s)
+    ((:solution-fn @system) system)
     system))
 
 (defn- close-ws-conn! [conn]

@@ -1,5 +1,6 @@
 (ns stockfighter.state
   (require [clojure.core.async :as async]
+           [manifold.stream :as stream]
            [clojure.pprint :refer (pprint)]))
 
 (defn handle-fill
@@ -14,22 +15,27 @@
           (update-in [:orders] assoc id order)
           (update-in [:inventory] update-fn filled)))))
 
-(defn- log-fill [m]
+(defn profit
+  "Calculate profit from the fills we've recorded"
+  [sys]
+  {:pre [(instance? clojure.lang.Atom sys)]}
+  0)
+
+(defn- log-fill [sys m]
   (let [{:keys [order filled] {:keys [id direction]} :order} m]
     (println "FILL: order-id:" id
              "; dir:" direction
-             "; filled:" filled)))
+             "; filled:" filled
+             "; profit:" (profit sys))))
+
+(defn- handle-message [sys msg]
+  (log-fill sys msg)
+  (reset! sys (handle-fill sys msg))
+  (println "**** Inventory: " (:inventory @sys)))
 
 (defn fill-resp
-  "Pull fill message from websocket a update system"
-  [system]
-  (println "^^^Starting fills responder thread!!!!")
-  (let [fills-chan (:fills-chan @system)]
-    (async/thread
-      (loop []
-        (when-let [m (async/<!! fills-chan)]
-          (log-fill m)
-          (reset! system (handle-fill system m))
-          (println "**** Inventory: " (:inventory @system))
-          (recur)))
-      (println "^^^ Stopping fills responder thread!!!"))))
+  "Pull fill message from websocket and update the system"
+  [sys]
+  (let [fills-chan (:fills-chan @sys)
+        handler (partial handle-message sys)]
+    (stream/consume handler fills-chan)))

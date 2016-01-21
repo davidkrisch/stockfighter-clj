@@ -104,17 +104,19 @@
 
 ; Here be Websockets
 
+(defn parse-message [msg]
+  (->
+    msg
+    parse-string
+    clojure.walk/keywordize-keys))
+
 (defn- consume-websocket
   "Wait for messages on `ws-conn`, put them on `channel` when they arrive"
-  ([ws-conn channel]
-   (consume-websocket ws-conn channel false))
-  ([ws-conn channel log-prefix]
-   (async/thread
-     (loop []
-       (when-let [m (parse-string @(s/take! ws-conn))]
-         (when-let [_ (async/>!! channel (clojure.walk/keywordize-keys m))]
-           (when log-prefix (log/info log-prefix m))
-           (recur)))))))
+  [ws-conn channel]
+   (let [fill-stream (s/map parse-message ws-conn)
+         conn-stream (s/stream 8)]
+     (s/connect fill-stream conn-stream)
+     (s/connect conn-stream channel)))
 
 (defn ticker
   "
