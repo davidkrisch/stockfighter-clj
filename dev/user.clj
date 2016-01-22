@@ -8,6 +8,8 @@
             [clojure.core.async :as async]
             [aleph.http :as http]
             [manifold.stream :as s]
+            [manifold.deferred :as d]
+            [byte-streams :as bs]
             [cheshire.core :refer [parse-string generate-string]]
             [stockfighter.client :as client :refer :all]
             [stockfighter.core :as system]
@@ -15,14 +17,40 @@
 
 ;; To run in the repl: (reset)
 
+(defn- trade [sys qty price dir]
+  (let [{:keys [account venue stock]} @sys
+        b (order-body account venue stock qty price dir "limit")]
+    (order venue stock b)))
+
+(defn quote-and-order [sys qty dir]
+  (let [{:keys [venue stock]} @sys
+        price-kw (if (= "buy" dir) :bid :ask)]
+    @(d/chain' (stock-quote venue stock)
+               client/body
+               price-kw
+               #(trade sys qty % dir)
+               client/body
+               :id)))
+
+(defn buy-and-sell [sys qty]
+  [(quote-and-order sys qty "sell")
+   (quote-and-order sys qty "buy")])
+
+(defn sss [sys order-id]
+  (let [{:keys [venue stock]} @sys]
+    @(d/chain' (client/order-status venue stock order-id)
+               client/body)))
+
+;(map (partial sss sys) (buy-and-sell sys 100))
+
 (def system nil)
 
 (defn init
   "Initialize system, but don't start it running"
   []
-  (let [venue "YOFBEX"
-        stock "BYGO"
-        account "PS11017299"]
+  (let [venue "EDLBEX"
+        stock "WPYI"
+        account "BHK96929815"]
     (alter-var-root #'system
                     (constantly (system/make-system venue stock account do-it)))))
 
