@@ -6,10 +6,10 @@
   :dependencies [
                  [org.clojure/clojure "1.8.0"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [clj-http "2.0.0"]
                  [cheshire "5.5.0"]
                  [environ "1.0.1"]
                  [aleph "0.4.1-beta2"]
+                 [byte-streams "0.2.0"]
                  [org.clojure/core.async "0.2.374"]]
   :target-path "target/%s"
   :profiles {:dev {:source-paths ["dev"]
