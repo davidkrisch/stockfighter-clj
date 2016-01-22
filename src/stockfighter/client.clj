@@ -1,10 +1,10 @@
 (ns stockfighter.client
-  (:require [clj-http.client :as client]
-            [environ.core :refer [env]]
+  (:require [environ.core :refer [env]]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async]
             [aleph.http :as http]
             [manifold.stream :as s]
+            [byte-streams :as bs]
             [cheshire.core :refer [parse-string generate-string]]))
 
 (def protocol "https")
@@ -45,26 +45,31 @@
 
 (defn send-request
   ([endpoint]
-   (client/get (get-url (endpoint endpoints))
-               {:headers headers}))
+   (http/get (get-url (endpoint endpoints))
+             {:headers headers}))
   ([endpoint venue]
-   (client/get (get-url ((endpoint endpoints) venue))
-               {:headers headers}))
+   (http/get (get-url ((endpoint endpoints) venue))
+             {:headers headers}))
   ([endpoint venue stock]
-   (let [url (get-url ((endpoint endpoints) venue stock))]
-     (client/get url {:headers headers})))
+     (http/get (get-url ((endpoint endpoints) venue stock))
+               {:headers headers}))
   ([endpoint venue stock order-id]
-   (client/get (get-url ((endpoint endpoints) venue stock order-id))
-               {:headers headers})))
+   (http/get (get-url ((endpoint endpoints) venue stock order-id))
+             {:headers headers})))
 
 (defn send-post [endpoint venue stock body]
-  (client/post (get-url ((endpoint endpoints) venue stock))
+  (http/post (get-url ((endpoint endpoints) venue stock))
                {:headers headers
                 :body (generate-string body)
                 :body-encoding "UTF-8"}))
 
 (defn body [response]
-  (clojure.walk/keywordize-keys (parse-string (:body response))))
+  (->
+    response
+    :body
+    (bs/convert String)
+    parse-string
+    clojure.walk/keywordize-keys))
 
 (defn api-heartbeat []
   (send-request :api-heartbeat))
@@ -97,10 +102,8 @@
   (send-request :order-status venue stock order-id))
 
 (defn cancel-order [venue stock order-id]
-  (let [path ((:cancel-order endpoints) venue stock order-id)
-        url (get-url path)
-        resp (client/delete url {:headers headers})]
-    (body resp)))
+  (let [path ((:cancel-order endpoints) venue stock order-id)]
+    (http/delete (get-url path) {:headers headers})))
 
 ; Here be Websockets
 
