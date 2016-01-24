@@ -128,22 +128,83 @@ Closing the websocket is accomplished by closing `:chan-out`
 => (close! (:chan-out system))
 ```
 
-## Options
+### Options
 
-There aren't any yet.
+There aren't any yet, but it would be nice to be able to turn on debugging
+for HTTP requests and maybe other parts of the system.
 
-## Examples
+## Design
 
-See API docs above.
+### Data Model
 
-### Tests
+In the `dev.user` namespace there is a top level `atom` called __system__.
+It is a `map` that holds the application's state and configuration.
 
-None that pass!  I'm hoping to get some tests working as I learn more about
-clojure and clojure testing/testing-frameworks.
+#### State
 
-### Bugs
+The state of the application is held in `(:trades system)`.  It is an unordered
+vector of __trade__ maps.  Each trade represents a single order.  The trade
+could be in any state: failed, unfilled, partially filled, or fully filled.
 
-Plenty I'm sure.
+```clojure
+(def system
+  :account "<account-id>"
+  :venue "<venue-id>"
+  :stock "<stock-symbol>"
+  ...
+  <other-stuff>
+  ...
+  :trades [{:order-body {:account account
+                         :venue venue
+                         :stock stock
+                         :qty qty
+                         :price price
+                         :direction direction
+                         :orderType orderType}
+             :response (manifold/deferred)
+             :ts <timestamp>
+           }
+           ...])
+
+```
+
+<dl>
+  <dt>:order-body</dt>
+    <dd>(map) The POST body we submitted with the order</dd>
+
+  <dt>:response</dt>
+    <dd>(manifold/deferred) The response, possibly not realized.</dd>
+
+  <dt>:ts</dt>
+    <dd>Timestamp - when the order was submitted.</dd>
+</dl>
+
+#### Navigating :trades
+
+`:trades` contains every interaction we've had with the system, so we can
+answer many questions with it:
+
+1. What does my inventory look like? (long or short)
+2. What is the averge buy/sell price?
+3. What is my profit?
+4. How many unfilled orders do I have and how many shares are involved?
+5. How will my unfilled orders effect my inventory?
+
+These questions can be answered using the functions in the mostly incomplete
+`stockfighter.state` namespace.  I'm workin' in it!
+
+### Processes
+
+There are 5 processes
+
+- Ticker - connects to the quote ticker websocket and puts messages on a channel.
+  Runs in its own thread until `async/channel` is closed.
+- Order - Place orders using quotes from the ticker.
+- Inventory Maintenance - Its job is to minimize inventory. Single thread running in a loop
+  possibly with some sort of delay.
+- Order Status - manage orders once they've been placed.  Thread per order using
+  a dedicated thread pool
+- Visibility - periodically wakes up and prints state of system.
 
 ## License
 
