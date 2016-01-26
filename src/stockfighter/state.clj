@@ -20,19 +20,18 @@
                  (:trades @sys))))
 
 (defn index-of
-  "Find "
+  "Find the index in :trades of the given order-id"
   [sys order-id]
   (let [predicate #(= order-id (id %))
-        trades (:trades @sys)]
+        trades (:trades sys)]
     (first (keep-indexed (fn [i x] (when (predicate x) i))
                          trades))))
 
-(defn trade-closed
-  "Update trade with "
+(defn update-trade
+  "Update trade record with status message"
   [sys update]
-  ; Find (:id update) in (:trades @sys)
-  ; Update :status
-)
+  (let [idx (index-of sys (:id update))]
+    (update-in sys [:trades idx] assoc :status update)))
 
 (defn should-trade?
   "Make a decision if a trade is a good idea right now"

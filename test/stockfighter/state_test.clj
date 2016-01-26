@@ -53,6 +53,14 @@
          nil)))
 
 (deftest index-of-tests
-  (is (= (index-of by-id-sys 2) 1))
-  (is (= (index-of by-id-sys 4) nil))
-  (is (= (index-of by-id-sys nil) nil)))
+  (is (= (index-of @by-id-sys 2) 1))
+  (is (= (index-of @by-id-sys 4) nil))
+  (is (= (index-of @by-id-sys nil) nil)))
+
+(deftest update-trade-tests
+  (is (= (update-trade @by-id-sys
+                       {:id 2 :foo "bar"})
+         {:trades [{:response {:id 1}}
+                   {:response {:id 2}
+                    :status {:id 2 :foo "bar"}}
+                   {:response {:id 3}}]})))
