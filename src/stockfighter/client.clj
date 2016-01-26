@@ -116,10 +116,8 @@
 (defn- consume-websocket
   "Wait for messages on `ws-conn`, put them on `channel` when they arrive"
   [ws-conn channel]
-   (let [fill-stream (s/map parse-message ws-conn)
-         conn-stream (s/stream 8)]
-     (s/connect fill-stream conn-stream)
-     (s/connect conn-stream channel)))
+   (let [the-stream (s/map parse-message ws-conn)]
+     (s/connect the-stream channel)))
 
 (defn ticker
   "
@@ -138,7 +136,5 @@
   or fills-chan closes.
   "
   [system]
-  (let [sys @system
-        conn (:fills-ws-conn sys)
-        fills-chan (:fills-chan sys)]
-    (consume-websocket conn fills-chan)))
+  (let [{:keys [fills-ws-conn fills-chan]} @system]
+    (consume-websocket fills-ws-conn fills-chan)))

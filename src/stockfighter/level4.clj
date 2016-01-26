@@ -4,45 +4,51 @@
             [stockfighter.client :as client]
             [stockfighter.state :as state]))
 
-;; None of this works yet.  Getting closer though
-
 ;; --------------------------
 ;; Level 4 Dueling Bulldozers
 ;; --------------------------
 
-; sell? if :inventory > 0 (-100?)
-; buy? if :inventory < 0 (+100?)
+; Working code, but it doesn't win the level yet
 
-(defn- do-orders [system price direction]
-  (let [{:keys [venue stock account]} system
-        qty 100
-        order-type "limit"
-        b (client/order-body account venue stock qty price direction order-type)
-        resp (client/body (client/order venue stock b))
-        inv-fn (if (= "buy" direction) + -)
-        order (:order system)
-        inventory (:inventory system)]
-    (println (format ">>>>>>>> %s: %s" direction b))
-    (println (format ">>> Response: %s" resp))
-    ; TODO put resp in system:orders to allow cancelling unfilled orders
-    ; TODO update system:inventory with immediate fills
-    ))
+(defn- trade [sys qty price dir]
+  (let [{:keys [account venue stock]} @sys
+        b (client/order-body account venue stock qty price dir "limit")]
+    {:request-body b
+     :response (client/order venue stock b)}))
 
-(defn- price [q k]
-  (let [p (-> :quote q k)]
-    (if (= k :ask)
-      (+ p 200)
-      (- p 200))))
+(defn update-order-status
+  "In a future, call order status until order is closed
+  Update the trade with the fully filled order status"
+  [sys trade]
+  (future
+    (let [resp @(:response trade)
+          body (client/body resp)
+          {:keys [venue stock]} @sys]
+      (when (= (:status resp) 200)
+        (loop []
+          (let [status @(client/order-status venue stock (:id body))
+                 order-status-body (client/body status)]
+            (if-not (:open order-status-body)
+              ; update @sys trades, delete next line
+              ;(println ">>> I'm in the future: " order-status-body)
+              (recur))))))))
 
-;(if (pos? (:inventory @system))
-  ;(do-orders system (price m :ask) "sell")
-  ;(do-orders system (price m :bid) "buy"))))
+(defn- make-orders [sys qty msg]
+  (let [{:keys [venue stock trades]} @sys
+        {:keys [ok] {:keys [bid ask]} :quote} msg]
+    (when (and (not-any? nil? [bid ask])
+               (every? #(> % 0) [bid ask]))
+      (when (state/should-trade? sys "sell")
+        (let [sell-trade (trade sys qty ask "sell")]
+          (println "Sell Sell Sell" sell-trade)
+          (swap! sys state/add-trade sell-trade)
+          (update-order-status sys sell-trade)))
+      (when (state/should-trade? sys "buy")
+        (let [buy-trade (trade sys qty bid "buy")]
+          (println "Buy Buy Buy" buy-trade)
+          (swap! sys state/add-trade buy-trade)
+          (update-order-status sys buy-trade))))))
 
-(defn- handle-quote [msg]
-  ; TODO do something besides log it
-  (println "Ticker:" msg))
-
-(defn do-it [system]
-  (println "^^^Starting quote responder thread!!!!")
+(defn stream-quotes [system]
   (let [ticker-chan (:ticker-chan @system)]
-    (stream/consume handle-quote ticker-chan)))
+    (stream/consume (partial make-orders system 250) ticker-chan)))

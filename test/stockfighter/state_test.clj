@@ -2,6 +2,8 @@
   (:require [clojure.test :refer :all]
             [stockfighter.state :refer :all]))
 
+; (test/run-tests 'stockfighter.state-test)
+
 (def order {:open true
             :symbol "BML"
             :orderType "limit"
@@ -34,3 +36,23 @@
          expected))
   (is (= (handle-fill sys fill)
          expected)))
+
+(deftest add-trade-tests
+  (is (= (add-trade {:trades []} {:a 1})
+         {:trades [{:a 1}]})))
+
+
+(def by-id-sys (atom {:trades [{:response {:id 1}}
+                                  {:response {:id 2}}
+                                  {:response {:id 3}}]}))
+
+(deftest by-id-tests
+  (is (= (by-id by-id-sys 2)
+         {:response {:id 2}}))
+  (is (= (by-id by-id-sys 0)
+         nil)))
+
+(deftest index-of-tests
+  (is (= (index-of by-id-sys 2) 1))
+  (is (= (index-of by-id-sys 4) nil))
+  (is (= (index-of by-id-sys nil) nil)))

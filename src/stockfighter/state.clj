@@ -1,11 +1,48 @@
 (ns stockfighter.state
-  (require [clojure.core.async :as async]
-           [manifold.stream :as stream]
-           [clojure.pprint :refer (pprint)]))
+  (require [manifold.stream :as stream]))
+
+(defn add-trade
+  "Append trade to (:trades sys)"
+  [sys trade]
+  (update-in sys [:trades] conj trade))
+
+(defn- id [trade]
+  (-> :response
+      trade
+      :id))
+
+(defn by-id
+  "Get trade in (:trades @sys) where id of trade is order-id"
+  [sys order-id]
+  {:pre [(instance? clojure.lang.Atom sys)]}
+  (first (filter #(= order-id
+                     (id %))
+                 (:trades @sys))))
+
+(defn index-of
+  "Find "
+  [sys order-id]
+  (let [predicate #(= order-id (id %))
+        trades (:trades @sys)]
+    (first (keep-indexed (fn [i x] (when (predicate x) i))
+                         trades))))
+
+(defn trade-closed
+  "Update trade with "
+  [sys update]
+  ; Find (:id update) in (:trades @sys)
+  ; Update :status
+)
+
+(defn should-trade?
+  "Make a decision if a trade is a good idea right now"
+  [sys dir]
+  {:pre [(instance? clojure.lang.Atom sys)]}
+    (< (count (:trades @sys)) 4))
 
 (defn handle-fill
   "Update system with execution ticker message.
-  This should be used as the update fn in swap!"
+  This should be used as the update fn in reset!"
   [sys fill]
   {:pre [(instance? clojure.lang.Atom sys)]}
   (when (:ok fill)

@@ -13,46 +13,20 @@
             [cheshire.core :refer [parse-string generate-string]]
             [stockfighter.client :as client :refer :all]
             [stockfighter.core :as system]
-            [stockfighter.level4 :refer [do-it]]))
-
-;; To run in the repl: (reset)
-
-(defn- trade [sys qty price dir]
-  (let [{:keys [account venue stock]} @sys
-        b (order-body account venue stock qty price dir "limit")]
-    (order venue stock b)))
-
-(defn quote-and-order [sys qty dir]
-  (let [{:keys [venue stock]} @sys
-        price-kw (if (= "buy" dir) :bid :ask)]
-    @(d/chain' (stock-quote venue stock)
-               client/body
-               price-kw
-               #(trade sys qty % dir)
-               client/body
-               :id)))
-
-(defn buy-and-sell [sys qty]
-  [(quote-and-order sys qty "sell")
-   (quote-and-order sys qty "buy")])
-
-(defn sss [sys order-id]
-  (let [{:keys [venue stock]} @sys]
-    @(d/chain' (client/order-status venue stock order-id)
-               client/body)))
-
-;(map (partial sss sys) (buy-and-sell sys 100))
+            [stockfighter.level4 :refer [stream-quotes]]
+            [stockfighter.state :as state]
+            [stockfighter.state-test :as state-test]))
 
 (def system nil)
 
 (defn init
   "Initialize system, but don't start it running"
   []
-  (let [venue "EDLBEX"
-        stock "WPYI"
-        account "BHK96929815"]
+  (let [venue "BKHEX"
+        stock "OSC"
+        account "KFB67201603"]
     (alter-var-root #'system
-                    (constantly (system/make-system venue stock account do-it)))))
+                    (constantly (system/make-system venue stock account stream-quotes)))))
 
 (defn stop
   "Shuts down and destroys the current development system."

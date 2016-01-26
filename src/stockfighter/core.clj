@@ -16,8 +16,9 @@
          :ticker-ws-conn nil
          :fills-ws-conn nil
          :solution-fn solution-fn
-         :inventory 0
-         :orders {}}))
+         :inventory 0 ; remove this, use :trades instead
+         :orders {} ; remove this, use :trades instead
+         :trades []}))
 
 (defn- sliding-buf-chan [size]
   (async/chan (async/sliding-buffer size)))
@@ -32,20 +33,20 @@
   (println "Starting the system")
   (let [{:keys [venue stock account]} @system
         ticker-url (client/ticker-tape-url venue stock account)
-        fills-url (client/fills-url venue stock account)
         ticker-ws-conn (ws-client ticker-url)
-        fills-ws-conn (ws-client fills-url)
         ticker-chan (sliding-buf-chan 1)
+        ;fills-url (client/fills-url venue stock account)
+        ;fills-ws-conn (ws-client fills-url)
         fills-chan (sliding-buf-chan 100)] ; TODO is sliding buffer okay?
     (swap! system assoc
            :ticker-chan ticker-chan
            :fills-chan fills-chan
-           :ticker-ws-conn ticker-ws-conn
-           :fills-ws-conn fills-ws-conn)
-    (stream/on-closed fills-ws-conn (println ">> fills websocket closed"))
+           :ticker-ws-conn ticker-ws-conn)
+           ;:fills-ws-conn fills-ws-conn)
+    ;(stream/on-closed fills-ws-conn (println ">> fills websocket closed"))
     (stream/on-closed ticker-ws-conn (println ">> ticker websocket closed"))
-    (client/executions system)
-    (state/fill-resp system)
+    ;(client/executions system)
+    ;(state/fill-resp system)
     (client/ticker system)
     ((:solution-fn @system) system)
     system))
