@@ -27,10 +27,10 @@
       (when (= (:status resp) 200)
         (loop []
           (let [status @(client/order-status venue stock (:id body))
-                 order-status-body (client/body status)]
-            (if-not (:open order-status-body)
-              ; update @sys trades, delete next line
-              ;(println ">>> I'm in the future: " order-status-body)
+                order-status-body (client/body status)]
+            (println ">>> Order status: " order-status-body)
+            (swap! sys state/update-trade order-status-body)
+            (when (:open order-status-body)
               (recur))))))))
 
 (defn- make-orders [sys qty msg]

@@ -9,6 +9,7 @@
 (defn- id [trade]
   (-> :response
       trade
+      deref
       :id))
 
 (defn by-id
@@ -28,7 +29,7 @@
                          trades))))
 
 (defn update-trade
-  "Update trade record with status message"
+  "Update trade with order-status"
   [sys update]
   (let [idx (index-of sys (:id update))]
     (update-in sys [:trades idx] assoc :status update)))
