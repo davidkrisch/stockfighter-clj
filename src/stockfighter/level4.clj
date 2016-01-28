@@ -28,13 +28,11 @@
           body (client/body resp)
           {:keys [venue stock]} @sys]
       (when (= (:status resp) 200)
-        (swap! sys state/add-trade trade)
         (loop []
           (let [status @(client/order-status venue stock (:id body))
                 order-status-body (client/body status)]
             (log/info ">>> Order status: " order-status-body)
             (swap! sys state/update-trade internal-id order-status-body)
-            (log/info ">>> After swap! <<<")
             (when (:open order-status-body)
               (Thread/sleep 2000)
               (recur))))))))
@@ -48,10 +46,12 @@
       (when (state/should-trade? sys "sell")
         (let [sell-trade (trade sys qty ask "sell")]
           (log/info "Sell Sell Sell" sell-trade)
+          (swap! sys state/add-trade sell-trade)
           (update-order-status sys sell-trade)))
       (when (state/should-trade? sys "buy")
         (let [buy-trade (trade sys qty bid "buy")]
           (log/info "Buy Buy Buy" buy-trade)
+          (swap! sys state/add-trade buy-trade)
           (update-order-status sys buy-trade))))))
 
 (defn stream-quotes [system]

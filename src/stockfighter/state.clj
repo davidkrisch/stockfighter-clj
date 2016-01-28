@@ -33,9 +33,7 @@
 (defn update-trade
   "Update trade with order-status"
   [sys internal-id update]
-  (log/info "in update-trade >>>" internal-id "<<<" update)
   (let [idx (index-of (:trades sys) internal-id)]
-    (log/info "&&&&& update-trade-idx" idx)
     (assoc-in sys [:trades idx :status] update)))
 
 (defn should-trade?

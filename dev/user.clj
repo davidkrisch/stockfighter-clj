@@ -22,9 +22,9 @@
 (defn init
   "Initialize system, but don't start it running"
   []
-  (let [venue "TESTEX"
-        stock "FOOBAR"
-        account "EXB123456"]
+  (let [venue "BEDEX"
+        stock "YIJG"
+        account "FFB27250987"]
     (alter-var-root #'system
                     (constantly (system/make-system venue stock account stream-quotes)))))
 
