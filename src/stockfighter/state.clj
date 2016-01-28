@@ -1,5 +1,9 @@
 (ns stockfighter.state
-  (require [manifold.stream :as stream]))
+  (require [manifold.stream :as stream]
+           [clojure.tools.logging :as log]
+           [stockfighter.client :as client]))
+
+(defn uuid [] (str (java.util.UUID/randomUUID)))
 
 (defn add-trade
   "Append trade to (:trades sys)"
@@ -10,6 +14,7 @@
   (-> :response
       trade
       deref
+      client/body
       :id))
 
 (defn by-id
@@ -20,18 +25,17 @@
                      (id %))
                  (:trades @sys))))
 
-(defn index-of
-  "Find the index in :trades of the given order-id"
-  [sys order-id]
-  (let [predicate #(= order-id (id %))
-        trades (:trades sys)]
-    (first (keep-indexed (fn [i x] (when (predicate x) i))
+(defn index-of [trades id]
+  (let [pred #(= (:internal-id %) id)]
+    (first (keep-indexed (fn [i x] (when (pred x) i))
                          trades))))
 
 (defn update-trade
   "Update trade with order-status"
-  [sys update]
-  (let [idx (index-of sys (:id update))]
+  [sys internal-id update]
+  (log/info "in update-trade >>>" internal-id "<<<" update)
+  (let [idx (index-of sys internal-id)]
+    (log/info "&&&&& update-trade-idx" idx)
     (update-in sys [:trades idx] assoc :status update)))
 
 (defn should-trade?
@@ -60,7 +64,7 @@
 
 (defn- log-fill [sys m]
   (let [{:keys [order filled] {:keys [id direction]} :order} m]
-    (println "FILL: order-id:" id
+    (log/info "FILL: order-id:" id
              "; dir:" direction
              "; filled:" filled
              "; profit:" (profit sys))))
@@ -68,7 +72,7 @@
 (defn- handle-message [sys msg]
   (log-fill sys msg)
   (reset! sys (handle-fill sys msg))
-  (println "**** Inventory: " (:inventory @sys)))
+  (log/info "**** Inventory: " (:inventory @sys)))
 
 (defn fill-resp
   "Pull fill message from websocket and update the system"
