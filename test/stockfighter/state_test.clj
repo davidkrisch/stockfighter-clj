@@ -69,22 +69,21 @@
   ;(is (= (by-id by-id-sys 0)
          ;nil)))
 
+(defn second-id [sys]
+  (-> :trades
+      sys
+      (nth 1)
+      :internal-id))
+
 (deftest index-of-tests
-  (let [trades (:trades by-id-sys)
-        second-id (-> :trades
-                      by-id-sys
-                      (nth 1)
-                      :internal-id)]
-    (log/info second-id)
-    (log/info by-id-sys)
-    (is (= (index-of trades second-id) 1))
+  (let [trades (:trades by-id-sys)]
+    (is (= (index-of trades (second-id by-id-sys)) 1))
     (is (= (index-of trades 0) nil))
     (is (= (index-of trades nil) nil))))
 
-;(deftest update-trade-tests
-  ;(is (= (update-trade @by-id-sys
-                       ;{:id 2 :foo "bar"})
-         ;{:trades [{:response response1}
-                   ;{:response response2
-                    ;:status {:id 2 :foo "bar"}}
-                   ;{:response response3}]})))
+(deftest update-trade-tests
+  (let [update {:the "update" :foo "bar"}]
+    (is (= (update-trade by-id-sys
+                         (second-id by-id-sys)
+                         update)
+           (assoc-in by-id-sys [:trades 1 :status] update)))))

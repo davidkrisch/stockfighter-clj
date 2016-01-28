@@ -11,7 +11,7 @@
             [manifold.deferred :as d]
             [byte-streams :as bs]
             [cheshire.core :refer [parse-string generate-string]]
-            [stockfighter.client :as client :refer :all]
+            [stockfighter.client :as client]
             [stockfighter.core :as system]
             [stockfighter.level4 :refer [stream-quotes]]
             [stockfighter.state :as state]
@@ -22,9 +22,9 @@
 (defn init
   "Initialize system, but don't start it running"
   []
-  (let [venue "BKHEX"
-        stock "OSC"
-        account "KFB67201603"]
+  (let [venue "TESTEX"
+        stock "FOOBAR"
+        account "EXB123456"]
     (alter-var-root #'system
                     (constantly (system/make-system venue stock account stream-quotes)))))
 

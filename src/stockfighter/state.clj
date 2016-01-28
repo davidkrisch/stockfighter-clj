@@ -10,20 +10,20 @@
   [sys trade]
   (update-in sys [:trades] conj trade))
 
-(defn- id [trade]
-  (-> :response
-      trade
-      deref
-      client/body
-      :id))
+;(defn- id [trade]
+  ;(-> :response
+      ;trade
+      ;deref
+      ;client/body
+      ;:id))
 
-(defn by-id
-  "Get trade in (:trades @sys) where id of trade is order-id"
-  [sys order-id]
-  {:pre [(instance? clojure.lang.Atom sys)]}
-  (first (filter #(= order-id
-                     (id %))
-                 (:trades @sys))))
+;(defn by-id
+  ;"Get trade in (:trades @sys) where id of trade is order-id"
+  ;[sys order-id]
+  ;{:pre [(instance? clojure.lang.Atom sys)]}
+  ;(first (filter #(= order-id
+                     ;(id %))
+                 ;(:trades @sys))))
 
 (defn index-of [trades id]
   (let [pred #(= (:internal-id %) id)]
@@ -34,9 +34,9 @@
   "Update trade with order-status"
   [sys internal-id update]
   (log/info "in update-trade >>>" internal-id "<<<" update)
-  (let [idx (index-of sys internal-id)]
+  (let [idx (index-of (:trades sys) internal-id)]
     (log/info "&&&&& update-trade-idx" idx)
-    (update-in sys [:trades idx] assoc :status update)))
+    (assoc-in sys [:trades idx :status] update)))
 
 (defn should-trade?
   "Make a decision if a trade is a good idea right now"
