@@ -87,3 +87,25 @@
                          (second-id by-id-sys)
                          update)
            (assoc-in by-id-sys [:trades 1 :status] update)))))
+
+(def profit-atom (atom {:trades [{:status {:totalFilled 10
+                                           :price 10
+                                           :direction "buy"}}
+                                 {:status {:totalFilled 10
+                                           :price 11
+                                           :direction "sell"}}]}))
+
+(def profit-atom2 (atom {:trades [{:status {:totalFilled 8
+                                            :price 10
+                                            :direction "buy"}}
+                                  {:status {:totalFilled 10
+                                            :price 11
+                                            :direction "sell"}}]}))
+
+; (* (- avg-sell-price avg-buy-price)
+;    (min buy-count sold-count))
+; (* (- 11 10)
+;    (min 8 10))
+(deftest profit-tests
+  (is (= (profit profit-atom) 10))
+  (is (= (profit profit-atom2) 8)))

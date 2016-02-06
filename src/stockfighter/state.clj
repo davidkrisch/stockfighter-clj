@@ -54,11 +54,33 @@
           (update-in [:orders] assoc id order)
           (update-in [:inventory] update-fn filled)))))
 
+
+(defn update-avg [avg cnt price num]
+  (/ (+ (* price num)
+        (* avg cnt))
+     (+ num cnt)))
+
+; curr = {:buy 0 :sell 0 :buy-spend 0 :sell-spend 0}
+(defn- spend [curr new-val]
+  (let [{:keys [totalFilled price direction]} new-val
+        dir (keyword direction)
+        spend-key (keyword (str direction "-spend"))
+        trade-spend (* totalFilled price)]
+    (-> curr
+      (update dir + totalFilled)
+      (update spend-key + trade-spend))))
+
+; (* (- avg-sell-price avg-buy-price)
+;    (min buy-count sold-count))
 (defn profit
-  "Calculate profit from the fills we've recorded"
+  "Calculate profit so far"
   [sys]
   {:pre [(instance? clojure.lang.Atom sys)]}
-  0)
+  (let [s (map :status (:trades @sys))
+        init {:buy 0 :sell 0 :buy-spend 0 :sell-spend 0}
+        totals (reduce spend init s)
+        {:keys [buy-spend sell-spend]} totals]
+    (- sell-spend buy-spend)))
 
 (defn- log-fill [sys m]
   (let [{:keys [order filled] {:keys [id direction]} :order} m]
