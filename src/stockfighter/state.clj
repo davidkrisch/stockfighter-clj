@@ -36,24 +36,6 @@
   (let [idx (index-of (:trades sys) internal-id)]
     (assoc-in sys [:trades idx :status] update)))
 
-(defn should-trade?
-  "Make a decision if a trade is a good idea right now"
-  [sys dir]
-  {:pre [(instance? clojure.lang.Atom sys)]}
-    (< (count (:trades @sys)) 4))
-
-(defn handle-fill
-  "Update system with execution ticker message.
-  This should be used as the update fn in reset!"
-  [sys fill]
-  {:pre [(instance? clojure.lang.Atom sys)]}
-  (when (:ok fill)
-    (let [{:keys [order filled] {:keys [id direction]} :order} fill
-          update-fn (if (= "buy" direction) + -)]
-      (-> @sys
-          (update-in [:orders] assoc id order)
-          (update-in [:inventory] update-fn filled)))))
-
 (defn- update-position
   "Update position with trade-status"
   [current-position trade-status]
@@ -72,6 +54,35 @@
   (let [status-list (map :status (:trades @sys))
         init {:shares 0 :cash 0}]
     (reduce update-position init status-list)))
+
+; {:ok true :num-shares 10}
+(defn should-trade?
+  "Make a decision if a trade is a good idea right now"
+  [sys dir]
+  {:pre [(instance? clojure.lang.Atom sys)]}
+  (let [shares (:shares (position sys))
+        ok {:ok true :num-shares 10}
+        not-ok {:ok false}]
+    (if (= dir "buy")
+      (if (< shares 250) ok not-ok)
+      (if (> shares -250) ok not-ok))))
+
+; Functions to handle messages from fill websocket
+;
+; Working code, but not used, because it doesn't update
+; the part of @sys used by position
+
+(defn handle-fill
+  "Update system with execution ticker message.
+  This should be used as the update fn in reset!"
+  [sys fill]
+  {:pre [(instance? clojure.lang.Atom sys)]}
+  (when (:ok fill)
+    (let [{:keys [order filled] {:keys [id direction]} :order} fill
+          update-fn (if (= "buy" direction) + -)]
+      (-> @sys
+          (update-in [:orders] assoc id order)
+          (update-in [:inventory] update-fn filled)))))
 
 (defn- log-fill [sys m]
   (let [{:keys [order filled] {:keys [id direction]} :order} m]

@@ -89,23 +89,33 @@
            (assoc-in by-id-sys [:trades 1 :status] update)))))
 
 ;
-; Test position
+; Test position & should-trade?
 ;
 
-(def profit-atom (atom {:trades [{:status {:totalFilled 10
-                                           :price 10
-                                           :direction "buy"}}
-                                 {:status {:totalFilled 10
-                                           :price 11
-                                           :direction "sell"}}]}))
+(defn mock-trades [bought sold]
+  (atom {:trades [{:status {:totalFilled bought
+                            :price 10
+                            :direction "buy"}}
+                  {:status {:totalFilled sold
+                            :price 11
+                            :direction "sell"}}]}))
 
-(def profit-atom2 (atom {:trades [{:status {:totalFilled 8
-                                            :price 10
-                                            :direction "buy"}}
-                                  {:status {:totalFilled 10
-                                            :price 11
-                                            :direction "sell"}}]}))
 
 (deftest position-tests
-  (is (= (position profit-atom) {:shares 0 :cash 10}))
-  (is (= (position profit-atom2) {:shares -2 :cash 30})))
+  (is (= (position (mock-trades 10 10)) {:shares 0 :cash 10}))
+  (is (= (position (mock-trades 8 10)) {:shares -2 :cash 30})))
+
+
+(deftest should-trade?-tests
+  (is (= (should-trade? (mock-trades 0 0) "buy")
+         {:ok true :num-shares 10}))
+  (is (= (should-trade? (mock-trades 259 10) "buy")
+         {:ok true :num-shares 10}))
+  (is (= (should-trade? (mock-trades 250 0) "buy")
+         {:ok false}))
+  (is (= (should-trade? (mock-trades 0 0) "sell")
+         {:ok true :num-shares 10}))
+  (is (= (should-trade? (mock-trades 10 259) "sell")
+         {:ok true :num-shares 10}))
+  (is (= (should-trade? (mock-trades 0 250) "sell")
+         {:ok false})))
