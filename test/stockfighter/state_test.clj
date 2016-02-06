@@ -88,6 +88,10 @@
                          update)
            (assoc-in by-id-sys [:trades 1 :status] update)))))
 
+;
+; Test position
+;
+
 (def profit-atom (atom {:trades [{:status {:totalFilled 10
                                            :price 10
                                            :direction "buy"}}
@@ -102,10 +106,6 @@
                                             :price 11
                                             :direction "sell"}}]}))
 
-; (* (- avg-sell-price avg-buy-price)
-;    (min buy-count sold-count))
-; (* (- 11 10)
-;    (min 8 10))
-(deftest profit-tests
-  (is (= (profit profit-atom) 10))
-  (is (= (profit profit-atom2) 8)))
+(deftest position-tests
+  (is (= (position profit-atom) {:shares 0 :cash 10}))
+  (is (= (position profit-atom2) {:shares -2 :cash 30})))

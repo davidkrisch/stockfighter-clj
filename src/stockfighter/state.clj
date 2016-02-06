@@ -54,40 +54,31 @@
           (update-in [:orders] assoc id order)
           (update-in [:inventory] update-fn filled)))))
 
+(defn- update-position
+  "Update position with trade-status"
+  [current-position trade-status]
+  (let [{:keys [totalFilled price direction]} trade-status
+        shares-fn (if (= direction "buy") + -)
+        cash-fn (if (= direction "buy") - +)]
+    (-> current-position
+        (update :shares shares-fn totalFilled)
+        (update :cash cash-fn (* price totalFilled)))))
 
-(defn update-avg [avg cnt price num]
-  (/ (+ (* price num)
-        (* avg cnt))
-     (+ num cnt)))
-
-; curr = {:buy 0 :sell 0 :buy-spend 0 :sell-spend 0}
-(defn- spend [curr new-val]
-  (let [{:keys [totalFilled price direction]} new-val
-        dir (keyword direction)
-        spend-key (keyword (str direction "-spend"))
-        trade-spend (* totalFilled price)]
-    (-> curr
-      (update dir + totalFilled)
-      (update spend-key + trade-spend))))
-
-; (* (- avg-sell-price avg-buy-price)
-;    (min buy-count sold-count))
-(defn profit
-  "Calculate profit so far"
+(defn position
+  "Calculate cash & shares in hand.
+  returns a map of the form {:shares 0 :cash 0}"
   [sys]
   {:pre [(instance? clojure.lang.Atom sys)]}
-  (let [s (map :status (:trades @sys))
-        init {:buy 0 :sell 0 :buy-spend 0 :sell-spend 0}
-        totals (reduce spend init s)
-        {:keys [buy-spend sell-spend]} totals]
-    (- sell-spend buy-spend)))
+  (let [status-list (map :status (:trades @sys))
+        init {:shares 0 :cash 0}]
+    (reduce update-position init status-list)))
 
 (defn- log-fill [sys m]
   (let [{:keys [order filled] {:keys [id direction]} :order} m]
     (log/info "FILL: order-id:" id
              "; dir:" direction
              "; filled:" filled
-             "; profit:" (profit sys))))
+             "; position:" (position sys))))
 
 (defn- handle-message [sys msg]
   (log-fill sys msg)
