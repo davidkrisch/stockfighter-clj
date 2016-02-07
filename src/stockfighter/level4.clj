@@ -31,29 +31,29 @@
         (loop []
           (let [status @(client/order-status venue stock (:id body))
                 order-status-body (client/body status)]
-            (log/info ">>> Order status: " order-status-body)
             (swap! sys state/update-trade internal-id order-status-body)
             (when (:open order-status-body)
               (Thread/sleep 2000)
               (recur))))))))
 
-(defn- make-orders [sys qty msg]
-  (let [{:keys [venue stock trades]} @sys
-        {:keys [ok] {:keys [bid ask]} :quote} msg]
-    ; TODO do something with ok
-    (when (and (not-any? nil? [bid ask])
-               (every? #(> % 0) [bid ask]))
-      (when (state/should-trade? sys "sell")
-        (let [sell-trade (trade sys qty ask "sell")]
-          (log/info "Sell Sell Sell" sell-trade)
-          (swap! sys state/add-trade sell-trade)
-          (update-order-status sys sell-trade)))
-      (when (state/should-trade? sys "buy")
-        (let [buy-trade (trade sys qty bid "buy")]
-          (log/info "Buy Buy Buy" buy-trade)
-          (swap! sys state/add-trade buy-trade)
-          (update-order-status sys buy-trade))))))
+(defn- mmmm [sys dir price]
+  (let [s (state/should-trade? sys dir)]
+    (when (:ok s)
+      (let [the-trade (trade sys (:qty s) price dir)]
+        (swap! sys state/add-trade the-trade)
+        (update-order-status sys the-trade)))))
+
+(defn- make-orders [sys msg]
+  (when (:ok msg)
+    (let [{:keys [venue stock trades]} @sys
+          {{:keys [bid ask]} :quote} msg]
+      (when (and (not-any? nil? [bid ask])
+                 (every? #(> % 0) [bid ask]))
+        (mmmm sys "buy" bid)
+        (mmmm sys "sell" ask)
+        (Thread/sleep 1000)
+        (log/info (state/position sys))))))
 
 (defn stream-quotes [system]
   (let [ticker-chan (:ticker-chan @system)]
-    (stream/consume (partial make-orders system 250) ticker-chan)))
+    (stream/consume (partial make-orders system) ticker-chan)))

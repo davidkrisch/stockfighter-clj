@@ -7,18 +7,19 @@
 
 (defn make-system
   "Returns a new instace of the whole application"
-  [venue stock account solution-fn]
-  (atom {:venue venue
-         :stock stock
-         :account account
-         :ticker-chan nil
-         :fills-chan nil
-         :ticker-ws-conn nil
-         :fills-ws-conn nil
-         :solution-fn solution-fn
-         :inventory 0 ; remove this, use :trades instead
-         :orders {} ; remove this, use :trades instead
-         :trades []}))
+  [venue stock account solution-fn old-sys]
+  (let [trades (if (nil? old-sys) [] (:trades old-sys))]
+    (atom {:venue venue
+           :stock stock
+           :account account
+           :ticker-chan nil
+           :fills-chan nil
+           :ticker-ws-conn nil
+           :fills-ws-conn nil
+           :solution-fn solution-fn
+           :inventory 0 ; remove this, use :trades instead
+           :orders {} ; remove this, use :trades instead
+           :trades trades})))
 
 (defn- sliding-buf-chan [size]
   (async/chan (async/sliding-buffer size)))

@@ -22,11 +22,15 @@
 (defn init
   "Initialize system, but don't start it running"
   []
-  (let [venue "BEDEX"
-        stock "YIJG"
-        account "FFB27250987"]
+  (let [venue "IFJEX"
+        stock "TIA"
+        account "CFS29521290"]
     (alter-var-root #'system
-                    (constantly (system/make-system venue stock account stream-quotes)))))
+                    (constantly (system/make-system venue
+                                                    stock
+                                                    account
+                                                    stream-quotes
+                                                    system)))))
 
 (defn stop
   "Shuts down and destroys the current development system."
