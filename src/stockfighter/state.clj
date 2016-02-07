@@ -39,12 +39,14 @@
 (defn- update-position
   "Update position with trade-status"
   [current-position trade-status]
-  (let [{:keys [totalFilled price direction]} trade-status
-        shares-fn (if (= direction "buy") + -)
-        cash-fn (if (= direction "buy") - +)]
-    (-> current-position
-        (update :shares shares-fn totalFilled)
-        (update :cash cash-fn (* price totalFilled)))))
+  (if (some? trade-status)
+    (let [{:keys [totalFilled price direction]} trade-status
+          shares-fn (if (= direction "buy") + -)
+          cash-fn (if (= direction "buy") - +)]
+      (-> current-position
+          (update :shares shares-fn totalFilled)
+          (update :cash cash-fn (* price totalFilled))))
+    current-position))
 
 (defn position
   "Calculate cash & shares in hand.
@@ -57,7 +59,7 @@
 
 ; {:ok true :num-shares 10}
 (defn should-trade?
-  "Make a decision if a trade is a good idea right now"
+  "Is trading is a good idea right now?"
   [sys dir]
   {:pre [(instance? clojure.lang.Atom sys)
          (contains? #{"buy" "sell"} dir)]}

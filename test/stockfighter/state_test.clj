@@ -98,7 +98,8 @@
                             :direction "buy"}}
                   {:status {:totalFilled sold
                             :price 11
-                            :direction "sell"}}]}))
+                            :direction "sell"}}
+                  {:status nil}]}))
 
 
 (deftest position-tests
