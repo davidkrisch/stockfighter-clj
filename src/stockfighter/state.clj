@@ -59,9 +59,10 @@
 (defn should-trade?
   "Make a decision if a trade is a good idea right now"
   [sys dir]
-  {:pre [(instance? clojure.lang.Atom sys)]}
+  {:pre [(instance? clojure.lang.Atom sys)
+         (contains? #{"buy" "sell"} dir)]}
   (let [shares (:shares (position sys))
-        ok {:ok true :num-shares 10}
+        ok {:ok true :qty 10}
         not-ok {:ok false}]
     (if (= dir "buy")
       (if (< shares 250) ok not-ok)

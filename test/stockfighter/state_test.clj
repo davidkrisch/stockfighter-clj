@@ -108,14 +108,14 @@
 
 (deftest should-trade?-tests
   (is (= (should-trade? (mock-trades 0 0) "buy")
-         {:ok true :num-shares 10}))
+         {:ok true :qty 10}))
   (is (= (should-trade? (mock-trades 259 10) "buy")
-         {:ok true :num-shares 10}))
+         {:ok true :qty 10}))
   (is (= (should-trade? (mock-trades 250 0) "buy")
          {:ok false}))
   (is (= (should-trade? (mock-trades 0 0) "sell")
-         {:ok true :num-shares 10}))
+         {:ok true :qty 10}))
   (is (= (should-trade? (mock-trades 10 259) "sell")
-         {:ok true :num-shares 10}))
+         {:ok true :qty 10}))
   (is (= (should-trade? (mock-trades 0 250) "sell")
          {:ok false})))
