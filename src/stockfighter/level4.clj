@@ -35,11 +35,11 @@
             (when-not (:open order-status-body)
               (log/info order-status-body))
             (when (:open order-status-body)
-              (Thread/sleep 1500)
+              (Thread/sleep 1200)
               (recur))))))))
 
 (defn- mmmm [sys dir price]
-  (let [s (state/should-trade? sys dir)]
+  (let [s (state/should-trade2? sys dir)]
     (when (:ok s)
       (let [the-trade (trade sys (:qty s) price dir)]
         (swap! sys state/add-trade the-trade)
@@ -53,7 +53,7 @@
                  (< 10 (- ask bid)))
         (mmmm sys "buy" (+ bid 5))
         (mmmm sys "sell" (- ask 5))
-        (Thread/sleep 2000)
+        (Thread/sleep 1000)
         (log/info (state/position sys))))))
 
 (defn stream-quotes [system]

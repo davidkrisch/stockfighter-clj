@@ -57,18 +57,56 @@
         init {:shares 0 :cash 0}]
     (reduce update-position init status-list)))
 
+(defn- update-outstanding [outstanding-orders trade]
+    (let [request-body (:request-body trade)
+          {:keys [direction qty]} request-body
+          shares-fn (if (= direction "buy") + -)]
+      (shares-fn outstanding-orders qty)))
+
+(defn outstanding [sys]
+  "Position of outstanding orders (trades without status)"
+  {:pre [(instance? clojure.lang.Atom sys)]}
+  (let [trades (filter #(-> % :status nil?) (:trades @sys))]
+    (reduce update-outstanding 0 trades)))
+
 ; {:ok true :num-shares 10}
 (defn should-trade?
   "Is trading is a good idea right now?"
   [sys dir]
   {:pre [(instance? clojure.lang.Atom sys)
          (contains? #{"buy" "sell"} dir)]}
-  (let [shares (:shares (position sys))
-        ok {:ok true :qty 200}
+  (let [filled (:shares (position sys))
+        out (outstanding sys)
+        ok {:ok true :qty 10}
         not-ok {:ok false}]
     (if (= dir "buy")
-      (if (< shares 600) ok not-ok)
-      (if (> shares -600) ok not-ok))))
+      (if (< (+ filled out) 250) ok not-ok)
+      (if (> (+ filled out) -250) ok not-ok))))
+
+(defn open-orders
+  "Returns a lazy sequence of open orders"
+  [sys]
+  {:pre [(instance? clojure.lang.Atom sys)]}
+  (filter #(or (-> % :status nil?)
+               (-> % :status :open))
+          (:trades @sys)))
+
+(defn is-out?
+  "Is there an outstanding order in this direction?"
+  [sys dir]
+  (some #(= (-> %
+                :request-body
+                :direction)
+            dir)
+        (open-orders sys)))
+
+(defn should-trade2? [sys dir]
+  {:pre [(instance? clojure.lang.Atom sys)
+         (contains? #{"buy" "sell"} dir)]}
+  (log/info "Open orders: " (count (open-orders sys)))
+  (if (is-out? sys dir)
+    {:ok false}
+    {:ok true :qty 200}))
 
 ; Functions to handle messages from fill websocket
 ;

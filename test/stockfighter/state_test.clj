@@ -93,13 +93,24 @@
 ;
 
 (defn mock-trades [bought sold]
-  (atom {:trades [{:status {:totalFilled bought
+  (atom {:trades [{:status {:open true
+                            :totalFilled bought
                             :price 10
-                            :direction "buy"}}
-                  {:status {:totalFilled sold
+                            :direction "buy"}
+                   :request-body {:direction "buy"
+                                  :qty 10}}
+                  {:status nil
+                   :request-body {:direction "sell"
+                                  :qty 10}}
+                  {:status {:open false
+                            :totalFilled 10
                             :price 11
-                            :direction "sell"}}
-                  {:status nil}]}))
+                            :direction "sell"}
+                   :request-body {:direction "sell"
+                                  :qty 10}}
+                  {:status nil
+                   :request-body {:direction "sell"
+                                  :qty 20}}]}))
 
 
 (deftest position-tests
@@ -110,7 +121,7 @@
 (deftest should-trade?-tests
   (is (= (should-trade? (mock-trades 0 0) "buy")
          {:ok true :qty 10}))
-  (is (= (should-trade? (mock-trades 259 10) "buy")
+  (is (= (should-trade? (mock-trades 249 10) "buy")
          {:ok true :qty 10}))
   (is (= (should-trade? (mock-trades 250 0) "buy")
          {:ok false}))
@@ -118,5 +129,9 @@
          {:ok true :qty 10}))
   (is (= (should-trade? (mock-trades 10 259) "sell")
          {:ok true :qty 10}))
-  (is (= (should-trade? (mock-trades 0 250) "sell")
+  (is (= (should-trade? (mock-trades 0 260) "sell")
          {:ok false})))
+
+
+(deftest outstanding-tests
+  (is (= (outstanding (mock-trades 0 0)) 10)))
