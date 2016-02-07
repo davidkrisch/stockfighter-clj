@@ -64,11 +64,11 @@
   {:pre [(instance? clojure.lang.Atom sys)
          (contains? #{"buy" "sell"} dir)]}
   (let [shares (:shares (position sys))
-        ok {:ok true :qty 100}
+        ok {:ok true :qty 200}
         not-ok {:ok false}]
     (if (= dir "buy")
-      (if (< shares 500) ok not-ok)
-      (if (> shares -500) ok not-ok))))
+      (if (< shares 600) ok not-ok)
+      (if (> shares -600) ok not-ok))))
 
 ; Functions to handle messages from fill websocket
 ;

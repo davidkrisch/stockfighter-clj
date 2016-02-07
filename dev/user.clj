@@ -22,9 +22,10 @@
 (defn init
   "Initialize system, but don't start it running"
   []
-  (let [venue "IFJEX"
-        stock "TIA"
-        account "CFS29521290"]
+  (let [venue "MMJEX"
+        stock "SDC"
+        account "YSS86221965"]
+    (println "**** init ***" system)
     (alter-var-root #'system
                     (constantly (system/make-system venue
                                                     stock

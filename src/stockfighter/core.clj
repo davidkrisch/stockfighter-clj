@@ -8,7 +8,8 @@
 (defn make-system
   "Returns a new instace of the whole application"
   [venue stock account solution-fn old-sys]
-  (let [trades (if (nil? old-sys) [] (:trades old-sys))]
+  (let [trades (if (nil? old-sys) [] (:trades @old-sys))]
+    (println "Existing trades " trades)
     (atom {:venue venue
            :stock stock
            :account account

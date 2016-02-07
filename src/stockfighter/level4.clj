@@ -32,8 +32,10 @@
           (let [status @(client/order-status venue stock (:id body))
                 order-status-body (client/body status)]
             (swap! sys state/update-trade internal-id order-status-body)
+            (when-not (:open order-status-body)
+              (log/info order-status-body))
             (when (:open order-status-body)
-              (Thread/sleep 2000)
+              (Thread/sleep 1500)
               (recur))))))))
 
 (defn- mmmm [sys dir price]
@@ -48,10 +50,10 @@
     (let [{:keys [venue stock trades]} @sys
           {{:keys [bid ask]} :quote} msg]
       (when (and (not-any? nil? [bid ask])
-                 (every? #(> % 0) [bid ask]))
-        (mmmm sys "buy" bid)
-        (mmmm sys "sell" ask)
-        (Thread/sleep 1000)
+                 (< 10 (- ask bid)))
+        (mmmm sys "buy" (+ bid 5))
+        (mmmm sys "sell" (- ask 5))
+        (Thread/sleep 2000)
         (log/info (state/position sys))))))
 
 (defn stream-quotes [system]
